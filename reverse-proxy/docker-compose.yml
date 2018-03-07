@@ -1,0 +1,16 @@
+version: '3.3'
+services:
+  reverse-proxy:
+    image: mpl-dockerhub.hepsiburada.com/reverse-proxy:${VERSION:-latest}
+    networks:
+      - build
+    deploy:
+      update_config:
+        delay: 10s
+        monitor: 2s
+    ports: 
+      - 80:80
+
+networks:
+  build:
+    external: true

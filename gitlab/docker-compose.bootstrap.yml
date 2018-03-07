@@ -1,0 +1,24 @@
+version: '3.3'
+services:
+  gitlab:
+    image: 'mpl-dockerhub.hepsiburada.com/gitlab:v10.2.8'
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://mpl-gitlab.hepsiburada.com'
+    networks: 
+      - build
+    ports:
+      - '8000:80'
+    volumes:
+      - 'gitlab-config:/etc/gitlab'
+      - 'gitlab-logs:/var/log/gitlab'
+      - 'gitlab-data:/var/opt/gitlab'
+
+volumes:
+  gitlab-config:
+  gitlab-logs:
+  gitlab-data:
+
+networks:
+  build:
+    external: true    

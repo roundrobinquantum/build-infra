@@ -1,0 +1,16 @@
+version: '3.3'
+services:
+  gocd-agent:
+    image: mpl-dockerhub.hepsiburada.com/gocd-agent-docker-client:v18.1.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - GO_SERVER_URL=https://mpl-gocd.hepsiburada.com:8154/go
+      - AGENT_AUTO_REGISTER_KEY=84e07d5d-1ad8-4a4a-9028-198909be0473
+      - AGENT_AUTO_REGISTER_RESOURCES=${RESOURCES:-docker}
+      - AGENT_AUTO_REGISTER_ENVIRONMENTS=${ENVIRONMENTS:-build}
+    deploy:
+      mode: global
+      update_config:
+        delay: 10s
+        monitor: 2s

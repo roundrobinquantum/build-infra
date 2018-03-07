@@ -1,0 +1,22 @@
+version: '3.3'
+services:
+  gocd-server:
+    image: mpl-dockerhub.hepsiburada.com/gocd-server:v18.1.0
+    ports:
+      - "8153:8153"
+      - "8154:8154"
+    networks:
+      - build
+    volumes:
+      - godata:/godata
+    deploy: 
+      update_config:
+        delay: 20s
+        monitor: 2s
+
+volumes:
+  godata:
+
+networks:
+  build:
+    external: true 

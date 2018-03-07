@@ -1,0 +1,17 @@
+version: '3.3'
+services:
+  nexus:
+    image: 'mpl-dockerhub.hepsiburada.com/nexus:3.8.0'
+    networks: 
+      - build
+    ports:
+      - '8081:8081'
+    volumes:
+      - 'nexus-data:/nexus-data'
+
+volumes:
+  nexus-data:
+
+networks:
+  build:
+    external: true    

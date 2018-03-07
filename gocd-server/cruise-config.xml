@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cruise xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="cruise-config.xsd" schemaVersion="104">
+ <server artifactsdir="artifacts" agentAutoRegisterKey="4b187451-9db4-43c7-97ad-876dcfc08182" webhookSecret="24832cd0-0996-485e-980f-a253ae676e4a" commandRepositoryLocation="default" serverId="40fcf36c-2ce0-4341-92b4-487a1d52ef61" tokenGenerationKey="66299fc3-5a76-4baf-b76e-8bd76fadca59" />
+  <security>
+    <authConfigs>
+      <authConfig id="auth-config-id" pluginId="cd.go.authentication.passwordfile">
+        <property>
+           <key>PasswordFilePath</key>
+           <value>/godata/plugins/external/root_password.properties</value>
+        </property>
+       </authConfig>
+    </authConfigs>
+  </security>
+  <pipelines group="automation">
+    <pipeline name="reverse-proxy" labeltemplate="${git}">
+      <materials>
+        <git url="http://dude:${DUDE_PASS}@mpl-gitlab.hepsiburada.com/mpl/build-infra.git" invertFilter="true" materialName="git">
+          <filter>
+            <ignore pattern="reverse-proxy/*" />
+          </filter>
+        </git>
+      </materials>
+      <stage name="update-nginx-conf">
+        <jobs>
+          <job name="update">
+            <tasks>
+              <exec command="/bin/sh" workingdir="reverse-proxy">
+                <arg>-c</arg>
+                <arg>docker build -t mpl-dockerhub.hepsiburada.com/reverse-proxy:${GO_PIPELINE_LABEL} .</arg>
+              </exec>
+              <exec command="/bin/sh">
+                <arg>-c</arg>
+                <arg>docker push mpl-dockerhub.hepsiburada.com/reverse-proxy:${GO_PIPELINE_LABEL}</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="/bin/sh" workingdir="reverse-proxy">
+                <arg>-c</arg>
+                <arg>VERSION=${GO_PIPELINE_LABEL} docker stack deploy --compose-file docker-compose.yml reverse-proxy</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+    <pipeline name="gitlab" labeltemplate="${git}">
+      <environmentvariables>
+        <variable name="FORCE_RESTART">
+          <value />
+        </variable>
+        <variable name="FORCE_RECONFIGURE">
+          <value />
+        </variable>
+        <variable name="GITLAB_LDAP_PASS" secure="true">
+          <encryptedValue>kBVRlXKYhkXPPoc2hmCQfA==</encryptedValue>
+        </variable>
+      </environmentvariables>
+      <materials>
+        <git url="http://dude:${DUDE_PASS}@mpl-gitlab.hepsiburada.com/mpl/build-infra.git" invertFilter="true" materialName="git">
+          <filter>
+            <ignore pattern="gitlab/*" />
+          </filter>
+        </git>
+      </materials>
+      <stage name="update-gitlab">
+        <jobs>
+          <job name="update">
+            <tasks>
+              <exec command="/bin/sh" workingdir="gitlab">
+                <arg>-c</arg>
+                <arg>if [ "$FORCE_RESTART" = "true" ]; then docker stack deploy --compose-file docker-compose.yml gitlab; fi</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="/bin/sh" workingdir="gitlab/config">
+                <arg>-c</arg>
+                <arg>if [ "$FORCE_RECONFIGURE" = "true" ]; then docker build -t gitlab-config --build-arg GITLAB_LDAP_PASS=${GITLAB_LDAP_PASS} .; fi</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="/bin/sh">
+                <arg>-c</arg>
+                <arg>if [ "$FORCE_RECONFIGURE" = "true" ]; then docker run --rm -v gitlab-config:/config gitlab-config; fi</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="/bin/sh">
+                <arg>-c</arg>
+                <arg>docker images | grep -E 'gitlab-authorization|gitlab-config' | awk '{ print $3 }' | xargs --no-run-if-empty docker rmi -f || /bin/true</arg>
+                <runif status="passed" />
+              </exec>
+              <exec command="/bin/sh" workingdir="gitlab">
+                <arg>-c</arg>
+                <arg>if [ "$FORCE_RECONFIGURE" = "true" ]; then docker exec `docker ps --filter name=gitlab_gitlab | awk '{print $1}' | tail -n 1` gitlab-ctl reconfigure; fi</arg>
+                <runif status="passed" />
+              </exec>
+            </tasks>
+          </job>
+        </jobs>
+      </stage>
+    </pipeline>
+  </pipelines>
+  <environments>
+    <environment name="build">
+      <environmentvariables>
+        <variable name="DUDE_PASS" secure="true">
+          <encryptedValue>Yd5ovxGeRnVXbC11ovON4A==</encryptedValue>
+        </variable>
+        <variable name="DUDES_PHILOSOPHY">
+          <value>Just, take it easy man!</value>
+        </variable>
+      </environmentvariables>
+      <agents>
+        <physical uuid="c36883dd-a9c6-4b15-a276-f290d001365e" />
+      </agents>
+      <pipelines>
+        <pipeline name="reverse-proxy" />
+        <pipeline name="gitlab" />
+      </pipelines>
+    </environment>
+  </environments>
+  <agents>
+    <agent hostname="d2f892fe9721" ipaddress="172.18.0.8" uuid="c36883dd-a9c6-4b15-a276-f290d001365e">
+      <resources>
+        <resource>docker</resource>
+      </resources>
+    </agent>
+  </agents>
+</cruise>

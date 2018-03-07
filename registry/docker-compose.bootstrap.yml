@@ -1,0 +1,17 @@
+version: '3.3'
+services:
+  registry:
+    image: 'registry:2'
+    networks:
+      - build
+    ports:
+      - '5000:5000'
+    volumes:
+        - registry:/var/lib/registry
+
+volumes:
+  registry:
+
+networks:
+  build:
+    external: true
