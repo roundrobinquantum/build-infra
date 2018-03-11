@@ -4,6 +4,7 @@ set -e
 
 function dispose() {
 
+  # Remove all stacks in attached build network
   remove_stacks
 
   # Wait for docker's gracefully stack removing 
@@ -29,8 +30,16 @@ function dispose() {
 }
 
 function remove_stacks() {
-  # Remove all stacks
-  docker stack rm $(docker stack ls | awk {'print $1'})
+
+  STACKS_IN_BUILD_NETWORK=$(docker ps --filter network=build --format '{{.Label "com.docker.stack.namespace"}}')
+
+  if [[ $STACKS_IN_BUILD_NETWORK ]]; then
+     echo "Removing all stacks in attached build network"
+     docker stack rm $STACKS_IN_BUILD_NETWORK
+  else
+     echo "Nothing found in stack. Exiting"
+     return 1
+  fi
 }
 
 function docker_prune() {
@@ -39,7 +48,7 @@ function docker_prune() {
 
 read -p "You're about to dispose the entire core build infrastructure!!!.This task will remove all docker stacks and your all images. Do you want to continue? (yes/no)" choice
 case "$choice" in 
-  yes|Yes ) cleanup;;
+  yes|Yes ) dispose;;
   no|No ) ;;
   * ) echo "Entered invalid choice";;
 esac
