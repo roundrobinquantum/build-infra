@@ -78,10 +78,18 @@ function create_nexus() {
 }
 
 function wait_until_gitlab_is_healthy() {
+
   GITLAB_IS_HEALTHY=false
+  TIMEOUT_THRESHOLD=0
 
   until [ "${GITLAB_IS_HEALTHY}" == "true" ]
   do
+   if [ ${TIMEOUT_THRESHOLD} -eq 10 ]; then
+       echo "dispose => Timeout threshold reached its own limit for gitlab. Maybe some errors about service or container happened.
+       please check gitlab. Exiting.."
+       return 1
+    fi
+
     STATE_OF_GITLAB=$(docker ps | grep gitlab | awk {'print $1'} | xargs --no-run-if-empty docker inspect -f {{.State.Health.Status}})
 
     if [ "${STATE_OF_GITLAB}" != "healthy" ]; then

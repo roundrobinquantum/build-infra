@@ -38,7 +38,7 @@ function tag_and_push_to_registry() {
 }
 
 function dispose_temp_nginx() {
-  echo "Disposing temp nginx and its image"
+  echo "bootstrap => Disposing temp nginx and its image"
   docker rm -fv temp-nginx | xargs echo "bootstrap => Removed container"
   docker rmi temp-nginx | xargs echo "bootstrap => Removed image"
 }
