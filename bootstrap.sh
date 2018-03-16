@@ -4,7 +4,7 @@ set -e
 
 function bootstrap() {
 
-  echo "Bootstrap process is started"
+  echo -e "\nBootstrap process is started"
 
   create_build_network
 
@@ -17,7 +17,7 @@ function bootstrap() {
   echo "Bootstrap process is completed."
 }
 
-function create_build_network(){
+function create_build_network() {
   # Create overlay and attachable network for communication between services
   docker network create -d overlay --attachable build
 }
