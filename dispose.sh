@@ -27,28 +27,34 @@ function remove_stacks() {
   export STACKS_IN_BUILD_NETWORK=$(docker ps --filter network=build --format '{{.Label "com.docker.stack.namespace"}}')
 
   if [[ $STACKS_IN_BUILD_NETWORK ]]; then
-     echo "Removing all stacks in attached build network"
+     echo -e "\nRemoving all stacks in attached build network \n"
      docker stack rm $STACKS_IN_BUILD_NETWORK
   else
-     echo "Nothing found in stack. Exiting"
+     echo "Nothing found in stack. Exiting.."
      return 1
   fi
 }
 
 function wait_until_stacks_are_removed() {
 
-  STACKS_ARE_REMAINING=false
+  STACKS_ARE_REMOVED=false
+  TIMEOUT_THRESHOLD=0
 
-  echo "waiting for gracefully shutting down stacks"
-
-  until [ "${STACKS_ARE_REMAINING}" == "true" ] 
+  until [ "${STACKS_ARE_REMOVED}" == "true" ]
   do
+    if [ $TIMEOUT_THRESHOLD -eq 4 ]; then
+       echo "Timeout threshold reached its own limit. Exiting.."
+       return 1
+    fi 
+
     INITIAL_STATE_OF_STACKS=$(docker ps --filter network=build --format '{{.Label "com.docker.stack.namespace"}}')
 
     if [[ $INITIAL_STATE_OF_STACKS ]]; then
-      STACKS_ARE_REMAINING=false
+      echo -e "\nWaiting for gracefully shutting down stacks \n"
+      sleep 5
+      let TIMEOUT_THRESHOLD=TIMEOUT_THRESHOLD+1
     else
-      STACKS_ARE_REMAINING=true
+      STACKS_ARE_REMOVED=true
     fi
   done
 }
@@ -61,19 +67,19 @@ function docker_volume_prune() {
   docker volume prune --force
 }
 
-function remove_non_using_images(){
+function remove_non_using_images() {
 
   IMAGES_IN_BUILD_NETWORK=$(docker ps --filter network=build --format '{{.Image}}')
 
   if [[ ${IMAGES_IN_BUILD_NETWORK} ]]; then
-    echo "removing non using images"
+    echo -e "\nRemoving non using images \n"
     docker rmi -f ${IMAGES_IN_BUILD_NETWORK}
   else
-    echo "Non using images not found... Moving on..."
+    echo -e "\nNon using images not found... Moving on... \n"
   fi
 }
 
-read -p "You're about to dispose the entire core build infrastructure!!!.This task will remove all docker stacks and your all images. Do you want to continue? (yes/no)" choice
+read -p "You're about to dispose the entire core build infrastructure!!!. This task will remove all docker stacks and your all images attached in build network. Do you want to continue? (yes/no)" choice
 case "$choice" in 
   yes|Yes ) dispose;;
   no|No ) ;;
