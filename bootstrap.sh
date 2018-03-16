@@ -102,6 +102,10 @@ function wait_until_gitlab_is_healthy() {
   done
 }
 
+function configure_gocd_server() {
+  echo "bootstrapper => Configuring gocd server"
+} 
+
 read -p "You're about to begin the bootstrapper.This can lead to adverse consequences. Do you want to continue? (yes/no)" choice
 case "$choice" in 
   yes|Yes ) bootstrap;;
