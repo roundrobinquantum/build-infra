@@ -53,6 +53,8 @@ function create_gitlab() {
   # Gitlab
   echo "bootstrap => Creating gitlab"
   docker stack deploy --compose-file gitlab/docker-compose.bootstrap.yml gitlab | xargs echo "bootstrap =>"
+  
+  wait_until_gitlab_is_healthy
 }
 
 function create_gocd_server() {
@@ -73,6 +75,23 @@ function create_nexus() {
   # Nexus
   echo "bootstrap => Creating nexus"
   docker stack deploy --compose-file nexus/docker-compose.bootstrap.yml nexus
+}
+
+function wait_until_gitlab_is_healthy() {
+  GITLAB_IS_HEALTHY=false
+
+  until [ "${GITLAB_IS_HEALTHY}" == "true" ]
+  do
+    STATE_OF_GITLAB=$(docker ps | grep gitlab | awk {'print $1'} | xargs --no-run-if-empty docker inspect -f {{.State.Health.Status}})
+
+    if [ "${STATE_OF_GITLAB}" != "healthy" ]; then
+      echo "bootstrap => Waiting to gitlab's health is healthy"
+      sleep 40
+    else
+      GITLAB_IS_HEALTHY=true
+      echo "bootstrap => Gitlab is healthy"
+    fi
+  done
 }
 
 read -p "You're about to begin the bootstrapper.This can lead to adverse consequences. Do you want to continue? (yes/no)" choice

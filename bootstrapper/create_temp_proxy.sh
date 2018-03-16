@@ -11,7 +11,7 @@ function wait_until_registry_is_running() {
 
       STATE_OF_REGISTRY=$(docker service ps --format {{.ID}} registry_registry | xargs docker inspect -f {{.Status.State}})
 
-      if [ "$STATE_OF_REGISTRY" != "running" ]; then
+      if [ "${STATE_OF_REGISTRY}" != "running" ]; then
         echo "bootstrap => Waiting for registry is at running state"
         sleep 10
       else
