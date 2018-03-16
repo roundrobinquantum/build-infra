@@ -1,7 +1,7 @@
 version: '3.3'
 services:
   gocd-server:
-    image: mpl-dockerhub.hepsiburada.com/gocd-server:v18.1.0
+    image: mpl-dockerhub.hepsiburada.com/gocd-server:v18.2.0
     ports:
       - "8153:8153"
       - "8154:8154"
