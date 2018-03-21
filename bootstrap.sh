@@ -8,7 +8,7 @@ function bootstrap() {
 
   create_build_network
 
-  pull_registry_image
+  create_registry_image
 
   create_registry
   create_reverse_proxy
@@ -25,9 +25,9 @@ function create_build_network() {
   docker network create -d overlay --attachable build | xargs echo "bootstrap => build network created with id :"
 }
 
-function pull_registry_image() {
-  echo "bootstrap => Pulling registry image from dockerhub"
-  docker pull registry:2.5
+function create_registry_image() {
+  echo "bootstrap => Creating registry image from officially dockerhub"
+  registry/image/create.sh
 }
 
 function create_registry() {
@@ -39,11 +39,21 @@ function create_reverse_proxy() {
   # Creating temp reverse proxy for generating real one
   echo "bootstrap => Creating a temp proxy"
   cd bootstrapper && ./create_temp_proxy.sh && cd -
+
+  echo "bootstrap => Pulling an alpine image and pushing to registry"
+  # pull_alpine_image_and_push_to_registry
   
   # Real reverse proxy
   echo "bootstrap => Creating reverse-proxy"
   docker stack deploy --compose-file reverse-proxy/docker-compose.bootstrap.yml reverse-proxy | xargs echo "bootstrap =>"
 }
+
+# function pull_alpine_image_and_push_to_registry() {
+
+#   docker pull alpine:3.7
+#   docker tag alpine:3.7 mpl-dockerhub.hepsiburada.com/alpine:3.7
+#   docker push mpl-dockerhub.hepsiburada.com/alpine:3.7
+# }
 
 function create_gitlab() {
   # Push gitlab to registry
@@ -55,6 +65,8 @@ function create_gitlab() {
   docker stack deploy --compose-file gitlab/docker-compose.bootstrap.yml gitlab | xargs echo "bootstrap =>"
   
   wait_until_gitlab_is_healthy
+
+  # generate_gitlab_root_password
 }
 
 function create_gocd_server() {
@@ -85,8 +97,7 @@ function wait_until_gitlab_is_healthy() {
   until [ "${GITLAB_IS_HEALTHY}" == "true" ]
   do
    if [ ${TIMEOUT_THRESHOLD} -eq 10 ]; then
-       echo "dispose => Timeout threshold reached its own limit for gitlab. Maybe some errors about service or container happened.
-       please check gitlab. Exiting.."
+       echo "dispose => Timeout threshold reached its own limit for gitlab. Some errors may have occured. Please check gitlab service. Exiting.."
        return 1
     fi
 
@@ -100,6 +111,21 @@ function wait_until_gitlab_is_healthy() {
       echo "bootstrap => Gitlab is healthy"
     fi
   done
+}
+
+function generate_gitlab_root_password() {
+  echo "bootstrap => Generating gitlab's root password"
+  echo "bootstrap => Building openssl for creating password"
+
+  cd helper-tools/openssl/image && ./create.sh && cd -
+
+  docker run --rm openssl rand -base64 10 > passwd
+
+  cat passwd | xargs echo "bootstrap => Generated gitlab password is :"
+
+  export GITLAB_ROOT_PASS=$(cat passwd)
+
+  rm -f passwd
 }
 
 function configure_gocd_server() {

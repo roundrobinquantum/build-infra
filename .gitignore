@@ -1,1 +1,7 @@
-.git
+*.swp
+*.swo
+atlassian-ide-plugin.xml
+*.idea
+*.coverprofile
+*.vscode
+debug
