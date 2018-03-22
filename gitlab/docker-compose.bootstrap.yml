@@ -1,7 +1,7 @@
 version: '3.3'
 services:
   gitlab:
-    image: 'mpl-dockerhub.hepsiburada.com/gitlab:v10.5.4'
+    image: 'mpl-dockerhub.hepsiburada.com/gitlab:10.5.6'
     environment:
       GITLAB_OMNIBUS_CONFIG: |
         external_url 'http://mpl-gitlab.hepsiburada.com'
