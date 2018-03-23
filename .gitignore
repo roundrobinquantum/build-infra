@@ -5,3 +5,4 @@ atlassian-ide-plugin.xml
 *.coverprofile
 *.vscode
 debug
+passwd

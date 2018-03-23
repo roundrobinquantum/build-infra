@@ -2,25 +2,6 @@
 
 set -e
 
-function wait_until_registry_is_running() {
-    
-    REGISTRY_IS_RUNNING=false
-
-    until [ "${REGISTRY_IS_RUNNING}" == "true" ]
-    do
-
-      STATE_OF_REGISTRY=$(docker service ps --format {{.ID}} registry_registry | xargs docker inspect -f {{.Status.State}})
-
-      if [ "${STATE_OF_REGISTRY}" != "running" ]; then
-        echo "bootstrap => Waiting for registry is at running state"
-        sleep 10
-      else
-        REGISTRY_IS_RUNNING=true
-        echo "bootstrap => Registry is running"
-      fi
-    done
-}
-
 function build_and_run_temp_nginx() {
   echo "bootstrap => Finding host machine ip"
   HOST_IP=$(ip route get 1 | awk '{print $NF;exit}')
@@ -45,6 +26,9 @@ function dispose_temp_nginx() {
 
 
 build_and_run_temp_nginx
-wait_until_registry_is_running
+
+source ../helper.sh 
+wait_until_service_is_at_running_state "registry_registry"
+
 tag_and_push_to_registry
 dispose_temp_nginx

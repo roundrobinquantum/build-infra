@@ -20,13 +20,13 @@ function bootstrap() {
 }
 
 function create_build_network() {
-  # Create overlay and attachable network for communication between services
-  echo "bootstrap => Creating build network"
+  # Create an overlay and attachable network for communication between services
+  echo "bootstrap => Creating a build network"
   docker network create -d overlay --attachable build | xargs echo "bootstrap => build network created with id :"
 }
 
 function create_registry_image() {
-  echo "bootstrap => Creating registry image from officially dockerhub"
+  echo "bootstrap => Creating registry image with pulling from officially dockerhub"
   registry/image/create.sh
 }
 
@@ -36,24 +36,14 @@ function create_registry() {
 }  
 
 function create_reverse_proxy() {
-  # Creating temp reverse proxy for generating real one
+  # Creating a temp reverse proxy for generating real one
   echo "bootstrap => Creating a temp proxy"
-  cd bootstrapper && ./create_temp_proxy.sh && cd -
-
-  echo "bootstrap => Pulling an alpine image and pushing to registry"
-  # pull_alpine_image_and_push_to_registry
+  cd bootstrapper/temp-proxy && ./create_temp_proxy.sh && cd -
   
   # Real reverse proxy
   echo "bootstrap => Creating reverse-proxy"
   docker stack deploy --compose-file reverse-proxy/docker-compose.bootstrap.yml reverse-proxy | xargs echo "bootstrap =>"
 }
-
-# function pull_alpine_image_and_push_to_registry() {
-
-#   docker pull alpine:3.7
-#   docker tag alpine:3.7 mpl-dockerhub.hepsiburada.com/alpine:3.7
-#   docker push mpl-dockerhub.hepsiburada.com/alpine:3.7
-# }
 
 function create_gitlab() {
   # Push gitlab to registry
@@ -66,7 +56,7 @@ function create_gitlab() {
   
   wait_until_gitlab_is_healthy
 
-  # generate_gitlab_root_password
+  generate_gitlab_root_password
 }
 
 function create_gocd_server() {
@@ -113,19 +103,45 @@ function wait_until_gitlab_is_healthy() {
   done
 }
 
+function wait_until_standalone_chrome_is_running() {
+  CHROME_IS_RUNNING=false
+
+    until [ "${CHROME_IS_RUNNING}" == "true" ]
+    do
+
+      STATE_OF_CHROME=$(docker service ps --format {{.ID}} selenium-hub_chrome | xargs docker inspect -f {{.Status.State}})
+
+      if [ "${STATE_OF_CHROME}" != "running" ]; then
+        echo "bootstrap => Waiting for standalone chrome is at running state"
+        sleep 10
+      else
+        CHROME_IS_RUNNING=true
+        echo "bootstrap => standalone chrome is running"
+      fi
+    done
+}
+
 function generate_gitlab_root_password() {
-  echo "bootstrap => Generating gitlab's root password"
   echo "bootstrap => Building openssl for creating password"
+  cd helpers/openssl/image && ./create.sh && cd -
 
-  cd helper-tools/openssl/image && ./create.sh && cd -
-
+  echo "bootstrap => Generating gitlab's root password"
   docker run --rm openssl rand -base64 10 > passwd
+  docker rmi openssl
 
   cat passwd | xargs echo "bootstrap => Generated gitlab password is :"
 
-  export GITLAB_ROOT_PASS=$(cat passwd)
+  export GITLAB_ROOT_PASSWORD=$(cat passwd)
 
-  rm -f passwd
+  echo "bootstrap => Creating a standalone selenium hub"
+  docker stack deploy --compose-file helpers/selenium-hub/docker-compose.yml selenium-hub
+
+  wait_until_standalone_chrome_is_running
+
+  cd gitlab/root-password/image && ./create.sh && cd -
+
+  docker run -d -e GITLAB_ROOT_PASSWORD=${GITLAB_ROOT_PASSWORD} -e GITLAB_URL='http://192.168.50.100:8000' --network build rootpasswd
+  docker rmi rootpasswd
 }
 
 function configure_gocd_server() {

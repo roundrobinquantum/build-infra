@@ -1,0 +1,34 @@
+version: '3.3'
+services:
+  hub:
+    image: 'selenium/hub'
+    networks: 
+      - build
+    ports:
+      - '4444:4444'
+    environment:
+     - GRID_BROWSER_TIMEOUT=60000
+     - GRID_TIMEOUT=60000
+     - GRID_MAX_SESSION=50
+     - GRID_MAX_INSTANCES=3
+     - GRID_CLEAN_UP_CYCLE=60000
+     - GRID_UNREGISTER_IF_STILL_DOWN_AFTER=180000
+     - GRID_NEW_SESSION_WAIT_TIMEOUT=60000
+
+  chrome:
+    image: 'selenium/node-chrome'
+    networks: 
+      - build
+    environment:
+      - HUB_PORT_4444_TCP_ADDR=hub
+      - HUB_PORT_4444_TCP_PORT=4444
+      - NODE_MAX_SESSION=1
+    entrypoint: bash -c 'SE_OPTS="-host $$HOSTNAME -port 5556" /opt/bin/entry_point.sh'
+    ports:
+      - "5556:5556"
+    depends_on:
+      - hub
+
+networks:
+  build:
+    external: true    
