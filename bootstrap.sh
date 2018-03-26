@@ -13,8 +13,8 @@ function bootstrap() {
   create_registry
   create_reverse_proxy
   create_gitlab
-  create_gocd_server
-  create_nexus
+  # create_gocd_server
+  # create_nexus
 
   echo "bootstrap => Process is completed."
 }
@@ -86,7 +86,7 @@ function wait_until_gitlab_is_healthy() {
 
   until [ "${GITLAB_IS_HEALTHY}" == "true" ]
   do
-   if [ ${TIMEOUT_THRESHOLD} -eq 10 ]; then
+   if [ ${TIMEOUT_THRESHOLD} -eq 15 ]; then
        echo "dispose => Timeout threshold reached its own limit for gitlab. Some errors may have occured. Please check gitlab service. Exiting.."
        return 1
     fi
@@ -94,8 +94,14 @@ function wait_until_gitlab_is_healthy() {
     STATE_OF_GITLAB=$(docker ps | grep gitlab | awk {'print $1'} | xargs --no-run-if-empty docker inspect -f {{.State.Health.Status}})
 
     if [ "${STATE_OF_GITLAB}" != "healthy" ]; then
-      echo "bootstrap => Waiting to gitlab's health is healthy"
-      sleep 40
+      echo "bootstrap => Waiting to gitlab's health is healthy Try Count : ${TIMEOUT_THRESHOLD}"
+      SLEEP_IN_SECOND=$((40 - (${TIMEOUT_THRESHOLD} * 4)))
+      if [ "${SLEEP_IN_SECOND}" -lt 10 ]; then
+       SLEEP_IN_SECOND=10
+      fi
+
+      sleep ${SLEEP_IN_SECOND}
+      TIMEOUT_THRESHOLD=$[TIMEOUT_THRESHOLD +1]
     else
       GITLAB_IS_HEALTHY=true
       echo "bootstrap => Gitlab is healthy"
@@ -103,29 +109,11 @@ function wait_until_gitlab_is_healthy() {
   done
 }
 
-function wait_until_standalone_chrome_is_running() {
-  CHROME_IS_RUNNING=false
-
-    until [ "${CHROME_IS_RUNNING}" == "true" ]
-    do
-
-      STATE_OF_CHROME=$(docker service ps --format {{.ID}} selenium-hub_chrome | xargs docker inspect -f {{.Status.State}})
-
-      if [ "${STATE_OF_CHROME}" != "running" ]; then
-        echo "bootstrap => Waiting for standalone chrome is at running state"
-        sleep 10
-      else
-        CHROME_IS_RUNNING=true
-        echo "bootstrap => standalone chrome is running"
-      fi
-    done
-}
-
 function generate_gitlab_root_password() {
   echo "bootstrap => Building openssl for creating password"
   cd helpers/openssl/image && ./create.sh && cd -
 
-  echo "bootstrap => Generating gitlab's root password"
+  echo "bootstrap => Generating gitlab's root password with openssl"
   docker run --rm openssl rand -base64 10 > passwd
   docker rmi openssl
 
@@ -134,14 +122,23 @@ function generate_gitlab_root_password() {
   export GITLAB_ROOT_PASSWORD=$(cat passwd)
 
   echo "bootstrap => Creating a standalone selenium hub"
-  docker stack deploy --compose-file helpers/selenium-hub/docker-compose.yml selenium-hub
+  docker stack deploy --compose-file helpers/selenium-hub/docker-compose.yml selenium
 
-  wait_until_standalone_chrome_is_running
+  source bootstrapper/helper.sh 
+  wait_until_service_is_at_running_state "selenium_chrome" "25"
 
-  cd gitlab/root-password/image && ./create.sh && cd -
+  echo "bootstrap => Creating agouti for connecting to standalone chrome"
+  cd bootstrapper/gitlab/root-password && ./create.sh && cd -
 
-  docker run -d -e GITLAB_ROOT_PASSWORD=${GITLAB_ROOT_PASSWORD} -e GITLAB_URL='http://192.168.50.100:8000' --network build rootpasswd
-  docker rmi rootpasswd
+  echo "bootstrap => Entering root password to gitlab."
+  docker run -d -e GITLAB_ROOT_PASSWORD=${GITLAB_ROOT_PASSWORD} -e GITLAB_URL='http://192.168.50.100:8000' --network build gitlab-root-password
+}
+
+function create_gitlab_group_and_projects() {
+  echo "bootstrap => Creating gitlab group and build-infra project"
+
+  cd bootstrapper/gitlab/config && ./create.sh && cd -
+  docker run --rm -d gitlab-config
 }
 
 function configure_gocd_server() {
