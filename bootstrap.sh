@@ -72,7 +72,7 @@ function create_gocd_server() {
 
   # GoCD server
   echo "bootstrap => Creating gocd server"
-  docker stack deploy --compose-file gocd-server/docker-compose.bootstrap.yml gocd-server
+  docker stack deploy --compose-file gocd-server/docker-compose.bootstrap.yml gocd
 }
 
 function create_nexus() {
