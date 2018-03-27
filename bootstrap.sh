@@ -134,11 +134,16 @@ function generate_gitlab_root_password() {
   docker run -d -e GITLAB_ROOT_PASSWORD=${GITLAB_ROOT_PASSWORD} -e GITLAB_URL='http://192.168.50.100:8000' --network build gitlab-root-password
 }
 
-function create_gitlab_group_and_projects() {
-  echo "bootstrap => Creating gitlab group and build-infra project"
+function create_gitlab_group_and_project() {
+  echo "bootstrap => Creating a gitlab group named mpl and and build-infra project"
 
   cd bootstrapper/gitlab/config && ./create.sh && cd -
   docker run --rm -d gitlab-config
+
+  echo "bootstrap => Removing image"
+  docker rmi gitlab-config
+
+  cp . helpers/git/image
 }
 
 function configure_gocd_server() {

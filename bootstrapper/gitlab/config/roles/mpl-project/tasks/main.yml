@@ -1,9 +1,9 @@
-- name: Create Gitlab Group
-  gitlab_group:
+- name: Create Gitlab Project in group Ansible
+  gitlab_project:
     server_url: http://mpl-gitlab.hepsiburada.com
-    validate_certs: True
     login_user: "{{ lookup('env','GITLAB_USER') }}"
     login_password: "{{ lookup('env','GITLAB_PASS') }}"
-    name: mpl
+    name: build-infra
+    group: mpl
     state: present
   delegate_to: localhost
