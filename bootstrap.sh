@@ -60,9 +60,9 @@ function create_gitlab() {
 
   generate_gitlab_root_password
 
-  create_gitlab_group_and_project
+  # create_gitlab_group_and_project
 
-  push_build_infra_to_gitlab
+  # push_build_infra_to_gitlab
 }
 
 function create_gocd_server() {
