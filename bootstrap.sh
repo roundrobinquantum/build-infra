@@ -2,6 +2,8 @@
 
 set -e
 
+GITLAB_ROOT_PASSWORD=""
+
 function bootstrap() {
 
   echo "bootstrap => Process is started."
@@ -13,7 +15,7 @@ function bootstrap() {
   create_registry
   create_reverse_proxy
   create_gitlab
-  # create_gocd_server
+  create_gocd_server
   # create_nexus
 
   echo "bootstrap => Process is completed."
@@ -57,6 +59,10 @@ function create_gitlab() {
   wait_until_gitlab_is_healthy
 
   generate_gitlab_root_password
+
+  create_gitlab_group_and_project
+
+  push_build_infra_to_gitlab
 }
 
 function create_gocd_server() {
@@ -114,12 +120,8 @@ function generate_gitlab_root_password() {
   cd helpers/openssl/image && ./create.sh && cd -
 
   echo "bootstrap => Generating gitlab's root password with openssl"
-  docker run --rm openssl rand -base64 10 > passwd
+  GITLAB_ROOT_PASSWORD=`docker run --rm openssl rand -base64 10`
   docker rmi openssl
-
-  cat passwd | xargs echo "bootstrap => Generated gitlab password is :"
-
-  export GITLAB_ROOT_PASSWORD=$(cat passwd)
 
   echo "bootstrap => Creating a standalone selenium hub"
   docker stack deploy --compose-file helpers/selenium-hub/docker-compose.yml selenium
@@ -131,7 +133,7 @@ function generate_gitlab_root_password() {
   cd bootstrapper/gitlab/root-password && ./create.sh && cd -
 
   echo "bootstrap => Entering root password to gitlab."
-  docker run -d -e GITLAB_ROOT_PASSWORD=${GITLAB_ROOT_PASSWORD} -e GITLAB_URL='http://192.168.50.100:8000' --network build gitlab-root-password
+  docker run -d -e GITLAB_ROOT_PASSWORD=${GITLAB_ROOT_PASSWORD} -e GITLAB_URL='http://mpl-gitlab.hepsiburada.com' --network build gitlab-root-password
 }
 
 function create_gitlab_group_and_project() {
@@ -142,8 +144,14 @@ function create_gitlab_group_and_project() {
 
   echo "bootstrap => Removing image"
   docker rmi gitlab-config
+}
 
-  cp . helpers/git/image
+function push_build_infra_to_gitlab() {
+  alias git="docker run -ti --rm -v $(pwd):/git alpine/git"
+  git add .
+  git -c "user.name=root" -c "user.email=root@gitlab.com" commit -m"Initial Commit"
+  git remote set-url origin http://root:${GITLAB_ROOT_PASSWORD}@mpl-gitlab.hepsiburada.com/mpl/build-infra.git
+  git push
 }
 
 function configure_gocd_server() {

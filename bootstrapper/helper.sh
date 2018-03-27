@@ -28,7 +28,7 @@ function wait_until_service_is_at_running_state() {
 
       if [ ${TRY_COUNT} -eq ${TIMEOUT_THRESHOLD} ]; then
         echo "dispose => Timeout threshold reached its own limit for service name : ${SERVICE_NAME}. Some errors may have occured. Please check service. Exiting.."
-        # return 1
+        return 1
       fi
 
       STATE_OF_SERVICE=$(docker service ps --format {{.ID}} ${SERVICE_NAME} | xargs docker inspect -f {{.Status.State}})

@@ -14,7 +14,7 @@
   <pipelines group="automation">
     <pipeline name="reverse-proxy" labeltemplate="${git}">
       <materials>
-        <git url="http://dude:${DUDE_PASS}@mpl-gitlab.hepsiburada.com/mpl/build-infra.git" invertFilter="true" materialName="git">
+        <git url="http://root:${ROOT_PASS}@mpl-gitlab.hepsiburada.com/mpl/build-infra.git" invertFilter="true" materialName="git">
           <filter>
             <ignore pattern="reverse-proxy/*" />
           </filter>
@@ -56,7 +56,7 @@
         </variable>
       </environmentvariables>
       <materials>
-        <git url="http://dude:${DUDE_PASS}@mpl-gitlab.hepsiburada.com/mpl/build-infra.git" invertFilter="true" materialName="git">
+        <git url="http://root:${ROOT_PASS}@mpl-gitlab.hepsiburada.com/mpl/build-infra.git" invertFilter="true" materialName="git">
           <filter>
             <ignore pattern="gitlab/*" />
           </filter>
@@ -100,27 +100,14 @@
   <environments>
     <environment name="build">
       <environmentvariables>
-        <variable name="DUDE_PASS" secure="true">
+        <variable name="ROOT_PASS" secure="true">
           <encryptedValue>Yd5ovxGeRnVXbC11ovON4A==</encryptedValue>
         </variable>
-        <variable name="DUDES_PHILOSOPHY">
-          <value>Just, take it easy man!</value>
-        </variable>
       </environmentvariables>
-      <agents>
-        <physical uuid="c36883dd-a9c6-4b15-a276-f290d001365e" />
-      </agents>
       <pipelines>
         <pipeline name="reverse-proxy" />
         <pipeline name="gitlab" />
       </pipelines>
     </environment>
   </environments>
-  <agents>
-    <agent hostname="d2f892fe9721" ipaddress="172.18.0.8" uuid="c36883dd-a9c6-4b15-a276-f290d001365e">
-      <resources>
-        <resource>docker</resource>
-      </resources>
-    </agent>
-  </agents>
 </cruise>

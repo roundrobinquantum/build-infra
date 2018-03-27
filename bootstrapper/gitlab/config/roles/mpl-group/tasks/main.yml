@@ -1,7 +1,6 @@
 - name: Create Gitlab Group
   gitlab_group:
     server_url: http://mpl-gitlab.hepsiburada.com
-    validate_certs: True
     login_user: "{{ lookup('env','GITLAB_USER') }}"
     login_password: "{{ lookup('env','GITLAB_PASS') }}"
     name: mpl
